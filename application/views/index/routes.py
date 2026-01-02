@@ -3,8 +3,9 @@ from functools import wraps
 import os
 import json
 import requests
+import time
 from pathlib import Path
-from .forms import LoginForm
+from .forms import LoginForm, AddItemForm
 
 main = Blueprint("main", __name__)
 
@@ -24,6 +25,12 @@ def load_items():
         return json.load(f)
 
 ITEMS = load_items()
+
+def save_items(items):
+    """Save items to JSON file"""
+    items_path = Path(__file__).parent.parent.parent / 'static' / 'items.json'
+    with open(items_path, 'w') as f:
+        json.dump(items, f, indent=2)
 
 def login_required(f):
     @wraps(f)
@@ -87,6 +94,7 @@ def login():
             session['logged_in'] = True
             return redirect(url_for('main.home'))
         else:
+            time.sleep(3)  # 3 second delay on failed login
             form.username.errors.append('Invalid credentials')
     
     return render_template('login.html', form=form)
@@ -140,3 +148,46 @@ def retrieve_prices():
 
 		prices.append(price_data)
 	return jsonify({'prices': prices})
+
+@main.route('/manage-items', methods=['GET', 'POST'])
+@login_required
+def manage_items():
+	global ITEMS
+	form = AddItemForm()
+	message = None
+	
+	if request.method == 'POST':
+		action = request.form.get('action')
+		
+		if action == 'add':
+			if form.validate_on_submit():
+				# Get highest ID and increment
+				max_id = max([item['id'] for item in ITEMS], default=0)
+				weapon = form.weapon.data
+				skin = form.skin.data
+				paint_index = form.paint_index.data
+				
+				# Create full name and market hash
+				full_name = f"{weapon} | {skin}"
+				market_hash = requests.utils.quote(full_name)
+				
+				new_item = {
+					'id': max_id + 1,
+					'name': full_name,
+					'market_hash': market_hash,
+					'paint_index': paint_index
+				}
+				ITEMS.append(new_item)
+				save_items(ITEMS)
+				message = f"Item '{full_name}' added successfully"
+				form = AddItemForm()  # Reset form
+	
+	return render_template('manage_items.html', items=ITEMS, message=message, form=form)
+
+@main.route('/remove-item/<int:item_id>', methods=['DELETE'])
+@login_required
+def remove_item(item_id):
+	global ITEMS
+	ITEMS = [item for item in ITEMS if item['id'] != item_id]
+	save_items(ITEMS)
+	return jsonify({'success': True})

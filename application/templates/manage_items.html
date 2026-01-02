@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Manage Items</title>
+</head>
+<body>
+    <h1>Manage Items</h1>
+    
+    <a href="{{ url_for('main.home') }}">Back to Home</a> | <a href="{{ url_for('main.logout') }}">Logout</a>
+    
+    {% if message %}
+    <p style="color: green; font-weight: bold;">{{ message }}</p>
+    {% endif %}
+    
+    <h2>Add New Item</h2>
+    <h4>Please enter exactly as you see on steam, the Paint Index is found in the url in csfloat when on a specific item.</h4>
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div>
+            {{ form.weapon.label }}
+            {{ form.weapon(placeholder="e.g., AWP") }}
+            {% if form.weapon.errors %}
+                <span style="color: red;">{{ form.weapon.errors[0] }}</span>
+            {% endif %}
+        </div>
+        
+        <div>
+            {{ form.skin.label }}
+            {{ form.skin(placeholder="e.g., Dragon Lore") }}
+            {% if form.skin.errors %}
+                <span style="color: red;">{{ form.skin.errors[0] }}</span>
+            {% endif %}
+        </div>
+        
+        <div>
+            {{ form.paint_index.label }}
+            {{ form.paint_index(placeholder="e.g., 401") }}
+            {% if form.paint_index.errors %}
+                <span style="color: red;">{{ form.paint_index.errors[0] }}</span>
+            {% endif %}
+        </div>
+        
+        {{ form.submit() }}
+    </form>
+    
+    <script>
+        document.querySelector('form').addEventListener('submit', function(e) {
+            const weapon = document.querySelector('input[name="weapon"]').value;
+            const skin = document.querySelector('input[name="skin"]').value;
+            const fullName = weapon + ' | ' + skin;
+            
+            // Create hidden fields for backend
+            let nameInput = document.createElement('input');
+            nameInput.type = 'hidden';
+            nameInput.name = 'name';
+            nameInput.value = fullName;
+            
+            let marketHashInput = document.createElement('input');
+            marketHashInput.type = 'hidden';
+            marketHashInput.name = 'market_hash';
+            const marketHash = encodeURIComponent(fullName)
+                .replace(/'/g, '%27')
+                .replace(/!/g, '%21');
+            marketHashInput.value = marketHash;
+            
+            let actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'add';
+            
+            this.appendChild(nameInput);
+            this.appendChild(marketHashInput);
+            this.appendChild(actionInput);
+        });
+    </script>
+    
+    <h2>Current Items</h2>
+    <table border="1" cellpadding="10">
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Action</th>
+        </tr>
+        {% for item in items %}
+        <tr>
+            <td>{{ item.id }}</td>
+            <td>{{ item.name }}</td>
+            <td>
+                <button onclick="removeItem('{{ item.id }}')">Remove</button>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+    
+    <script>
+        function removeItem(itemId) {
+            if (confirm('Are you sure?')) {
+                fetch(`/remove-item/${itemId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token() }}'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('Error removing item');
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+    </script>
