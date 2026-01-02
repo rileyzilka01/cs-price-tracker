@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CS Price Tracker</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <h1>CS Price Tracker</h1>
+    
+    <a href="{{ url_for('main.logout') }}">Logout</a>
+    
+    <h2>Select Items to Check</h2>
+    <form id="priceForm">
+        <input type="hidden" id="csrf_token" name="csrf_token" value="{{ csrf_token() }}" />
+        {% for item in items %}
+        <div style="border: 1px solid #ccc; padding: 10px; margin: 10px 0;">
+            <input type="checkbox" id="item_{{ item.id }}" name="items" value="{{ item.id }}" onchange="updateItemState()">
+            <label for="item_{{ item.id }}"><strong>{{ item.name }}</strong></label>
+            
+            <div id="wear_{{ item.id }}" style="margin-left: 20px; display: none;">
+                <label for="wear_select_{{ item.id }}">Condition:</label>
+                <select id="wear_select_{{ item.id }}" name="wear_{{ item.id }}" onchange="updateItemState()">
+                    <option value="FN">Factory New (0.00 - 0.07)</option>
+                    <option value="MW">Minimal Wear (0.07 - 0.15)</option>
+                    <option value="FT">Field-Tested (0.15 - 0.38)</option>
+                    <option value="WW">Well-Worn (0.38 - 0.45)</option>
+                    <option value="BS">Battle-Scarred (0.45 - 1.00)</option>
+                </select>
+            </div>
+        </div>
+        {% endfor %}
+        
+        <button type="button" onclick="retrievePrices()">Retrieve Prices</button>
+    </form>
+    
+    <h2>Prices</h2>
+    <div id="pricesContainer"></div>
+    
+    <script>
+        function updateItemState() {
+            // Show/hide wear selector based on checkbox
+            const checkboxes = document.querySelectorAll('input[name="items"]');
+            checkboxes.forEach(checkbox => {
+                const wearDiv = document.getElementById('wear_' + checkbox.value);
+                if (checkbox.checked) {
+                    wearDiv.style.display = 'block';
+                } else {
+                    wearDiv.style.display = 'none';
+                }
+            });
+        }
+        
+        function retrievePrices() {
+            const checkboxes = document.querySelectorAll('input[name="items"]:checked');
+            const selectedItems = Array.from(checkboxes).map(cb => {
+                const itemId = parseInt(cb.value);
+                const wearSelect = document.getElementById('wear_select_' + itemId);
+                return {
+                    id: itemId,
+                    wear: wearSelect.value
+                };
+            });
+            
+            if (selectedItems.length === 0) {
+                alert("Please select at least one item");
+                return;
+            }
+            
+            $.ajax({
+                url: '/retrieve-prices',
+                type: 'POST',
+                contentType: 'application/json',
+                headers: {
+                    'X-CSRFToken': document.getElementById('csrf_token').value
+                },
+                data: JSON.stringify({ selected_items: selectedItems }),
+                success: function(data) {
+                    const container = document.getElementById('pricesContainer');
+                    let html = '<table border="1"><tr><th>Item Name</th><th>Condition</th><th>CSFloat Price</th><th>Steam Price</th><th>Difference (Steam - Float)</th></tr>';
+                    data.prices.forEach(price => {
+                        let floatPrice = price.float_price ? `$${price.float_price.toFixed(2)}` : 'N/A';
+                        let steamPrice = price.steam_price ? `$${price.steam_price.toFixed(2)}` : 'N/A';
+                        let difference = price.float_price && price.steam_price ? price.steam_price - price.float_price : null;
+                        let differenceDisplay = difference !== null ? `$${difference.toFixed(2)}` : 'N/A';
+                        let diffColor = difference > 0 ? 'green' : difference < 0 ? 'red' : 'black';
+                        
+                        html += `<tr><td>${price.item_name}</td><td>${price.wear_name}</td><td>${floatPrice}</td><td>${steamPrice}</td><td style="color: ${diffColor};">${differenceDisplay}</td></tr>`;
+                        
+                        // Corrected values row
+                        let correctedFloatPrice = price.float_price ? `$${(price.float_price * 1.025).toFixed(2)}` : 'N/A';
+                        let correctedSteamPrice = price.steam_price ? `$${(price.steam_price * 0.85).toFixed(2)}` : 'N/A';
+                        let correctedDifference = (price.float_price && price.steam_price) ? (price.steam_price * 0.85) - (price.float_price * 1.025) : null;
+                        let correctedDifferenceDisplay = correctedDifference !== null ? `$${correctedDifference.toFixed(2)}` : 'N/A';
+                        let correctedDiffColor = correctedDifference > 0 ? 'green' : correctedDifference < 0 ? 'red' : 'black';
+                        
+                        html += `<tr style="background-color: #f0f0f0;"><td colspan="2"><strong>Corrected Values</strong></td><td>${correctedFloatPrice}</td><td>${correctedSteamPrice}</td><td style="color: ${correctedDiffColor};"><strong>${correctedDifferenceDisplay}</strong></td></tr>`;
+                    });
+                    html += '</table>';
+                    container.innerHTML = html;
+                },
+                error: function(error) {
+                    console.error('Error:', error);
+                    alert('Failed to retrieve prices');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+    <h1>CS Price Tracker - Login</h1>
+    
+    <form method="POST" novalidate>
+        {{ form.hidden_tag() }}
+        <div>
+            {{ form.username.label }}
+            {{ form.username(size=32) }}
+            {% if form.username.errors %}
+                <ul>
+                {% for error in form.username.errors %}
+                    <li style="color: red;">{{ error }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        
+        <div>
+            {{ form.password.label }}
+            {{ form.password(size=32) }}
+            {% if form.password.errors %}
+                <ul>
+                {% for error in form.password.errors %}
+                    <li style="color: red;">{{ error }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        </div>
+        
+        <div>
+            {{ form.submit() }}
+        </div>
+    </form>
+</body>
+</html>

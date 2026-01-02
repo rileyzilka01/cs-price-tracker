@@ -1,0 +1,8 @@
+services:
+  cs-price-tracker:
+    build: .
+    container_name: cspt
+    ports:
+      - "7059:8059"  # external:internal
+    env_file: .env
+    restart: always
