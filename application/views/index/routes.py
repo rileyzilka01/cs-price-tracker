@@ -40,12 +40,12 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-def get_float_price(paint_index, min_float=0.00, max_float=0.07):
+def get_float_price(paint_index, def_index, min_float=0.00, max_float=0.07):
     """Fetch price from CSFloat with float range"""
     try:
         float_key = os.getenv('FLOAT_KEY')
         response = requests.get(
-            f"https://csfloat.com/api/v1/listings?min_float={min_float}&max_float={max_float}&type=buy_now&limit=40&sort_by=lowest_price&paint_index={paint_index}",
+            f"https://csfloat.com/api/v1/listings?min_float={min_float}&max_float={max_float}&type=buy_now&limit=40&sort_by=lowest_price&def_index={def_index}&paint_index={paint_index}",
             headers={"Authorization": float_key},
             timeout=10
         )
@@ -129,7 +129,7 @@ def retrieve_prices():
 		wear_info = WEAR_LEVELS.get(wear, WEAR_LEVELS['FN'])
 		
 		# Get prices from both sources
-		float_price = get_float_price(item['paint_index'], wear_info['min'], wear_info['max'])
+		float_price = get_float_price(item['paint_index'], item['def_index'], wear_info['min'], wear_info['max'])
 		steam_price = get_steam_price(item['market_hash'], wear_info['name'])
 		
 		price_data = {
@@ -166,6 +166,7 @@ def manage_items():
 				weapon = form.weapon.data
 				skin = form.skin.data
 				paint_index = form.paint_index.data
+				def_index = form.def_index.data
 				
 				# Create full name and market hash
 				full_name = f"{weapon} | {skin}"
@@ -175,7 +176,8 @@ def manage_items():
 					'id': max_id + 1,
 					'name': full_name,
 					'market_hash': market_hash,
-					'paint_index': paint_index
+					'paint_index': paint_index,
+                    'def_index': def_index
 				}
 				ITEMS.append(new_item)
 				save_items(ITEMS)

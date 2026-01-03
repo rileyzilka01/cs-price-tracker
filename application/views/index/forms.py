@@ -11,4 +11,5 @@ class AddItemForm(FlaskForm):
     weapon = StringField('Weapon', validators=[DataRequired()])
     skin = StringField('Skin', validators=[DataRequired()])
     paint_index = IntegerField('Paint Index', validators=[DataRequired()])
+    def_index = IntegerField('Def Index', validators=[DataRequired()])
     submit = SubmitField('Add Item')

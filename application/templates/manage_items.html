@@ -39,6 +39,14 @@
                 <span style="color: red;">{{ form.paint_index.errors[0] }}</span>
             {% endif %}
         </div>
+
+        <div>
+            {{ form.def_index.label }}
+            {{ form.def_index(placeholder="e.g., 401") }}
+            {% if form.def_index.errors %}
+                <span style="color: red;">{{ form.def_index.errors[0] }}</span>
+            {% endif %}
+        </div>
         
         {{ form.submit() }}
     </form>
